@@ -88,9 +88,11 @@ void BccPhaseProvider::populateDataArray(double* dxVec, fftw_complex* realData, 
                          {0, 1, 1},
                          {1, 1, 1}};
 
-  double r0sqrd = m_period / 3.0;
+  double r0sqrd = m_period;
 
   double sum = 0.0;
+  double fMin = 0.0 - 1e-8;
+  double fMax = 0.0 + 1e-8;
 
   for (int k = 0; k < Nz; k++) 
   for (int j = 0; j < Ny; j++) 
@@ -118,58 +120,19 @@ void BccPhaseProvider::populateDataArray(double* dxVec, fftw_complex* realData, 
     }
 
     sum += realData[index][0];
+    if (realData[index][0] < fMin)
+      fMin = realData[index][0];
+    if (realData[index][0] > fMax)
+      fMax = realData[index][0];
   }
 
   double avg = sum / numFieldElements;
+  double hlfRng = (fMax - fMin) / 2.0;
 
   for (int index = 0; index < numFieldElements; index++) {
-    realData[index][0] = realData[index][0] - avg;
+    realData[index][0] -= avg;
+    realData[index][0] /= hlfRng;
   }
 
 } // end of populateDataArray method
 
-/*
-void BccPhaseProvider::populateDataArray(double* dqVec, fftw_complex* cplxData, int numFieldElements, int* gridSizes)
-{
-  // reset grid spacing
-  const double dq = 2 * M_PI / m_period;
-  dqVec[0] = dq; dqVec[1] = dq; dqVec[2] = dq;
-
-  // initialize values to zero
-  for (int index = 0; index < numFieldElements; index++) {
-    cplxData[index][0] = 0.0;
-    cplxData[index][1] = 0.0;
-  }
-
-  // set of fourier peaks: 
-  const double amp = m_amplitude;
-  std::vector<point> initVals;
-  initVals.push_back( makePoint( {  0,  0,  0}, m_avDensity));
-  initVals.push_back( makePoint( {  1,  1,  0}, amp/12 ));
-  initVals.push_back( makePoint( { -1,  1,  0}, amp/12 ));
-  initVals.push_back( makePoint( {  1, -1,  0}, amp/12 ));
-  initVals.push_back( makePoint( { -1, -1,  0}, amp/12 ));
-  initVals.push_back( makePoint( {  1,  0,  1}, amp/12 ));
-  initVals.push_back( makePoint( { -1,  0,  1}, amp/12 ));
-  initVals.push_back( makePoint( {  1,  0, -1}, amp/12 ));
-  initVals.push_back( makePoint( { -1,  0, -1}, amp/12 ));
-  initVals.push_back( makePoint( {  0,  1,  1}, amp/12 ));
-  initVals.push_back( makePoint( {  0, -1,  1}, amp/12 ));
-  initVals.push_back( makePoint( {  0,  1, -1}, amp/12 ));
-  initVals.push_back( makePoint( {  0, -1, -1}, amp/12 ));
-
-  // populate appropriate array vals
-  for (std::vector<point>::iterator it = initVals.begin(); it != initVals.end(); it++) {
-    std::vector<int> k = std::get<0>(*it);
-    double	     u = std::get<1>(*it);
-                                                                                         
-    int kz = k[2] < 0 ? k[2] + gridSizes[0] : k[2];
-    int ky = k[1] < 0 ? k[1] + gridSizes[1] : k[1];
-    int kx = k[0] < 0 ? k[0] + gridSizes[2] : k[0];
-                                                                                         
-    int index = kx + (gridSizes[2] * ky) + (gridSizes[2] * gridSizes[1] * kz);
-                                                                                         
-    cplxData[index][0] = u;
-  }
-} // end populateDataArray method
-*/

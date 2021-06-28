@@ -190,31 +190,6 @@ public:
 
 
     /*
-     * ============ timestep (ts) field initialization =============
-     */
-
-    /*
-    // make new grid sizes/spacing arrays
-    int*    tsGridSizes = (int*)    malloc(d * sizeof(int));
-    double* tsDq        = (double*) malloc(d * sizeof(double));
-    memcpy(tsGridSizes, gridSizes, d * sizeof(int));
-    memcpy(tsDq,        dq,        d * sizeof(double));
-
-    // create field provider
-    FieldProvider tsField(
-        cplxFieldData,
-        d,
-        tsGridSizes,
-        tsDq,
-        false,
-        phaseID);
-
-    // get pointers to ts field
-    fftw_complex* realTsData = tsField.getRealDataPointer();
-    fftw_complex* cplxTsData = tsField.getCplxDataPointer();
-    */
-
-    /*
      * ================= Quadratic coefficients ===================
      */
 
@@ -231,11 +206,7 @@ public:
     double fNew = calculator.f(cplxFieldData, realFieldData, laplacian, N);
     double fOld = 0.0;
 
-    // initial timestep and adaptive timestep params
-    // const double tMax = 2.0;
-    // double tMin = 0.05;
-    // const double delta = 0.001;
-    // const double rho   = 0.5 * (std::sqrt(5) - 1);
+    // time step
     double tStep = 0.1;
     
     // Nesterov step variables
@@ -256,51 +227,6 @@ public:
     {
       // increment iterator
       m_fieldIterator++;
-
-      // estimate timestep
-      tStep = tMax;
-      if (m_fieldIterator > 250)
-      	tMin = 0.01;
-      if (m_fieldIterator > 500)
-        tMin = 0.001;
-
-      bool tsStopCriterion = false;
-      while (!tsStopCriterion)
-      {
-        // update ts field
-        for (int i = 0; i < N; i++) {
-          // matrix element for update step
-          double A = 1.0 - tStep * laplacian[i] * Gamma[i];
-
-          // update ts field
-          cplxTsData[i][0] = (cplxNestData[i][0] + tStep * laplacian[i] * cplxNlDerivData[i][0]) / A;
-          cplxTsData[i][1] = (cplxNestData[i][1] + tStep * laplacian[i] * cplxNlDerivData[i][1]) / A * 0;
-        }
-        
-        // fourier transform ts field
-        tsField.transformC2R();
-
-        // compute quantities needed for test
-        double tsMinusNest = 0.0;
-        for (int i = 0; i < N; i++) 
-          tsMinusNest += (realTsData[i][0] - realNestData[i][0]) * (realTsData[i][0] - realNestData[i][0]);
-
-        // compute Nl free-energies:
-        double fNlNest  = calculator.fNL(realNestData,  N);
-        double fNlTs    = calculator.fNL(realTsData,    N);
-        
-        // test inequalities:
-        double inequality = fNlNest  - fNlTs - delta * tsMinusNest;
-
-        // update timestep
-        if (inequality <= 0 && tStep > tMin)
-          tStep *= rho;
-        else
-          tsStopCriterion = true; 
-      }
-      // verify timestep is between min and max bounds
-      if (tStep > tMax) tStep = tMax;
-      if (tStep < tMin) tStep = tMin;
 
       // update field
       for (int i = 0; i < N; i++) {
@@ -343,8 +269,6 @@ public:
       // update stop criterion
       if (m_fieldIterator == m_maxFieldIterations || std::abs(currentError) < m_errorTolerance)
         stopCriterion = true;
-
-      std::cout << "iteration no. " << m_fieldIterator << ", current error " << currentError << ", current timestep " << tStep << std::endl;
 
     } // end of while loop
 

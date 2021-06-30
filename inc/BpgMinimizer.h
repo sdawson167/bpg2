@@ -22,8 +22,8 @@ class BpgMinimizer {
 private:
   double m_errorTolerance;	// used for convergence test
   int	 m_maxIterations;	// used to limit total no. of iterations
-  int    m_maxFieldIterations  = 750; // max iterations of field opt. algorithm
-  int    m_maxPeriodIterations = 500;   // max iterations of period opt. algorithm
+  int    m_maxFieldIterations  = 500; // max iterations of field opt. algorithm
+  int    m_maxPeriodIterations = 1000;   // max iterations of period opt. algorithm
   int 	 m_iterator;		// used to track total iterations (alternating field/period optimization)
   int 	 m_fieldIterator;	// used to track no. of iterations of field minimization alg.
   int	 m_periodIterator;	// used to track no. of iterations of period optimization alg.

@@ -30,6 +30,18 @@ private:
     const double m_c14PeriodZ = 1.6 * m_c14PeriodX;
     const double m_c15Period  = 21;
 
+    const std::string m_filePath = "/home/sdawson/projects/def-shi/sdawson/BPG/code/";
+    const std::string m_lamFile  = m_filePath + "init_files/lam.csv";
+    const std::string m_gyrFile  = m_filePath + "init_files/gyr.csv";
+    const std::string m_hexFile  = m_filePath + "init_files/hex3.csv";
+    const std::string m_bccFile  = m_filePath + "init_files/bcc.csv";
+    const std::string m_fccFile  = m_filePath + "init_files/fcc.csv";
+    const std::string m_a15File  = m_filePath + "init_files/a15.csv";
+    const std::string m_sigFile  = m_filePath + "init_files/sig.csv";
+    const std::string m_c14File  = m_filePath + "init_files/c14.csv";
+    const std::string m_c15File  = m_filePath + "init_files/c15.csv";
+    
+
     int stringToPhaseID(std::string phaseID) {
       if      (phaseID == "lam") {
         return 1;

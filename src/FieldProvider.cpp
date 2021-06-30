@@ -66,6 +66,15 @@ FieldProvider::FieldProvider(
 
   // set phase ID
   m_phaseID = phaseID;
+
+  // save spacing and real data for reset
+  m_dx0 = (double*) malloc(sizeof(double) * m_dimension);
+  for (int d = 0; d < m_dimension; d++)
+    m_dx0[d] = m_dx[d];
+  
+  m_data0 = (double*) malloc(sizeof(double) * m_numFieldElements);
+  for (int i = 0; i < m_numFieldElements; i++)
+    m_data0[i] = m_realData[i][0];
 }
 
 // constructor to initialize fieldProvider from file
@@ -93,8 +102,9 @@ FieldProvider::FieldProvider(std::string fileName) {
 
   // read grid cell spacing - next d lines
   double* dr = (double*) malloc(sizeof(double) * m_dimension);
-  for (int d = 0; d < m_dimension; d++)
+  for (int d = 0; d < m_dimension; d++) {
     inFile >> dr[d];
+  }
 
   // read phase ID
   inFile >> m_phaseID;
@@ -129,17 +139,22 @@ FieldProvider::FieldProvider(std::string fileName) {
       throw std::length_error(exceptionMessage);
     }
 
-    if (pairIndex == 0) {
-      if (real) m_realData[index][0] = y;
-      else m_cplxData[index][0] = y;
-      pairIndex++;
+    if (real) {
+      m_realData[index][0] = y;
+      m_realData[index][1] = 0.0;
     } else {
-      if (real) m_realData[index++][1] = y;
-      else m_cplxData[index++][1] = y;
-      pairIndex = 0;
+      if (pairIndex == 0) {
+        m_cplxData[index][0] = y;
+        pairIndex++;
+      } else {
+        m_cplxData[index][1] = y;
+        pairIndex = 0;
+      }
     }
 
+    index++;
   }
+
   // make sure we have enough data points
   if (index != m_numFieldElements) {
     std::string exceptionMessage = "not enough data points in initializer file " + fileName;
@@ -149,6 +164,15 @@ FieldProvider::FieldProvider(std::string fileName) {
   // execute transform
   if (real) transformR2C();
   else transformC2R();
+
+  // initialize 
+  m_dx0 = (double*) malloc(sizeof(double) * m_dimension);
+  for (int d = 0; d < m_dimension; d++)
+    m_dx0[d] = m_dx[d];
+
+  m_data0 = (double*) malloc(sizeof(double) * m_numFieldElements);
+  for (int i = 0; i < m_numFieldElements; i++)
+    m_data0[i] = m_realData[i][0];
 
 } // end of constructor
 
@@ -185,7 +209,7 @@ void FieldProvider::saveAsInitializer(std::string fileName, bool real) {
   // print data
   for (int index = 0; index < m_numFieldElements; index++) {
     if (real)
-      stream << m_realData[index][0] << " " << m_realData[index][1] << std::endl;
+      stream << m_realData[index][0] << std::endl;
     else
       stream << m_cplxData[index][0] << " " << m_cplxData[index][1] << std::endl;
   }
@@ -230,8 +254,6 @@ void FieldProvider::saveForPlotting(std::string fileName, bool real) {
     double u;
     if (real)
       u = m_realData[index][0];
-    else
-      u = cplxMagnitude(m_cplxData[index]);
 
     stream << u << std::endl;
   }
@@ -279,4 +301,20 @@ void FieldProvider::laplacian(double* laplacian)
   } // end loop over index
 }
 
+void FieldProvider::reset() {
+  // reset real grid spacing
+  for (int d = 0; d < m_dimension; d++)
+    m_dx[d] = m_dx0[d];
 
+  // reset cplx grid spacing
+  updateDq();
+
+  // reset real data
+  for (int i = 0; i < m_numFieldElements; i++) {
+    m_realData[i][0] = m_data0[i];
+    m_realData[i][1] = 0.0;
+  }
+
+  // reset cplx data
+  transformR2C();
+}

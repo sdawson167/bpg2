@@ -37,7 +37,8 @@ private:
     
     int m_phaseID;	// field knows which phase it's initialized to - used for reset
 
-    double cplxMagnitude(fftw_complex x) { return (x[0] * x[0]) + (x[1] * x[1]); }
+    double *m_dx0;    // array with initial grid spacing (for reset)
+    double *m_data0;  // array with initial data (for reset)
 
 public:
     /*
@@ -59,6 +60,9 @@ public:
        
        if (m_fieldPlanC2R != NULL) fftw_destroy_plan(m_fieldPlanC2R);
        if (m_fieldPlanR2C != NULL) fftw_destroy_plan(m_fieldPlanR2C);
+
+       free(m_dx0);
+       free(m_data0);
      }
 
     /*
@@ -177,6 +181,13 @@ public:
      * =====================================
      */
     void laplacian(double* laplacian);
+
+    /*
+     * =====================================
+     *  reset field provider to initial data
+     * =====================================
+     */
+    void reset();
 
 }; // end FieldProvider class definition
 #endif

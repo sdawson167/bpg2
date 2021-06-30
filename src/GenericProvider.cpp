@@ -15,48 +15,57 @@ FieldProvider* GenericPhaseProvider::generateInitialCondition()
 {
   switch(m_phaseID) {
     case 1: {   // lam
-      LamellarPhaseProvider lamProvider{ m_lamPeriod, m_avgDensity, m_amplitude };
-      FieldProvider* initialFieldProvider = new FieldProvider(lamProvider.generateInitialCondition(64));
+      //LamellarPhaseProvider lamProvider{ m_lamPeriod, m_avgDensity, m_amplitude };
+      //FieldProvider* initialFieldProvider = new FieldProvider(lamProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_lamFile);
       return initialFieldProvider;
     }
     case 2: {   // gyr
-      GyroidPhaseProvider gyrProvider{ m_gyrPeriod, m_avgDensity, m_amplitude };
-      FieldProvider* initialFieldProvider = new FieldProvider(gyrProvider.generateInitialCondition(64));
+      //GyroidPhaseProvider gyrProvider{ m_gyrPeriod, m_avgDensity, m_amplitude };
+      //FieldProvider* initialFieldProvider = new FieldProvider(gyrProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_gyrFile);
       return initialFieldProvider;
     }
     case 3: {   // hex
-      CylindricalHexagonalPhaseProvider hexProvider{ m_hexPeriod, m_avgDensity, m_amplitude };
-      FieldProvider* initialFieldProvider = new FieldProvider(hexProvider.generateInitialCondition(64));
+      //CylindricalHexagonalPhaseProvider hexProvider{ m_hexPeriod, m_avgDensity, m_amplitude };
+      //FieldProvider* initialFieldProvider = new FieldProvider(hexProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_hexFile);     
       return initialFieldProvider;
     }
     case 4: {   // bcc
-      BccPhaseProvider bccProvider{ m_bccPeriod, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(bccProvider.generateInitialCondition(64));
+      //BccPhaseProvider bccProvider{ m_bccPeriod, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(bccProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_bccFile);     
       return initialFieldProvider;
     }
     case 5: {   // fcc
-      FccPhaseProvider fccProvider{ m_fccPeriod, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(fccProvider.generateInitialCondition(64));
+      //FccPhaseProvider fccProvider{ m_fccPeriod, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(fccProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_fccFile);     
       return initialFieldProvider;
     }
     case 6: {   // a15
-      A15PhaseProvider a15Provider{ m_a15Period, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(a15Provider.generateInitialCondition(64));
+      //A15PhaseProvider a15Provider{ m_a15Period, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(a15Provider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_a15File);
       return initialFieldProvider;
     }
     case 7: {
-      SigmaPhaseProvider sigProvider{ m_sigPeriodX, m_sigPeriodZ, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(sigProvider.generateInitialCondition(64));
+      //SigmaPhaseProvider sigProvider{ m_sigPeriodX, m_sigPeriodZ, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(sigProvider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_sigFile);
       return initialFieldProvider;
     }
     case 8: {
-      C14PhaseProvider c14Provider{ m_c14PeriodX, m_c14PeriodY, m_c14PeriodZ, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(c14Provider.generateInitialCondition(64));
+      //C14PhaseProvider c14Provider{ m_c14PeriodX, m_c14PeriodY, m_c14PeriodZ, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(c14Provider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_c14File);
       return initialFieldProvider;
     }
     case 9: {
-      C15PhaseProvider c15Provider{ m_c15Period, m_avgDensity, m_amplitude};
-      FieldProvider* initialFieldProvider = new FieldProvider(c15Provider.generateInitialCondition(64));
+      //C15PhaseProvider c15Provider{ m_c15Period, m_avgDensity, m_amplitude};
+      //FieldProvider* initialFieldProvider = new FieldProvider(c15Provider.generateInitialCondition(64));
+      FieldProvider* initialFieldProvider = new FieldProvider(m_c15File);
       return initialFieldProvider;
     }
     default: {  // dis

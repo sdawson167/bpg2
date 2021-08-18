@@ -23,7 +23,7 @@ private:
   double m_errorTolerance;	// used for convergence test
   int	 m_maxIterations;	// used to limit total no. of iterations
   int    m_maxFieldIterations  = 500; // max iterations of field opt. algorithm
-  int    m_maxPeriodIterations = 1000;   // max iterations of period opt. algorithm
+  int    m_maxPeriodIterations = 1000; // max iterations of period opt. algorithm
   int 	 m_iterator;		// used to track total iterations (alternating field/period optimization)
   int 	 m_fieldIterator;	// used to track no. of iterations of field minimization alg.
   int	 m_periodIterator;	// used to track no. of iterations of period optimization alg.
@@ -70,15 +70,16 @@ public:
     {
       // increment iterator
       m_iterator++;
-      std::cout << std::endl << "iteration no. " << m_iterator << std::endl;
+
+      //std::cout << std::endl << "iteration no. " << m_iterator << std::endl;
 
       // optimize field (fixed period)
       optimizeField(field, calculator);
-      std::cout << "free energy after field opt. " << calculator.f(field) << std::endl;
+      //std::cout << "free energy after field opt. " << calculator.f(field) << std::endl;
       
       // optimize period (fixed densities)
       optimizePeriods(field, calculator);
-      std::cout << "free energy after period opt. " << calculator.f(field) << std::endl;
+      //std::cout << "free energy after period opt. " << calculator.f(field) << std::endl;
 
       // recompute free-energy
       fOld = fNew;
@@ -97,10 +98,10 @@ public:
      */
 
     if (m_iterator == m_maxIterations) {
-      std::string message = "maximum iterations reached";
-      throw message;
+      std::string errorMessage = "maximum iterations reached";
+      throw errorMessage;
     }
-      
+  
   } // end minimize method
 
 
@@ -190,6 +191,31 @@ public:
 
 
     /*
+     * ============ timestep (ts) field initialization =============
+     */
+
+    /*
+    // make new grid sizes/spacing arrays
+    int*    tsGridSizes = (int*)    malloc(d * sizeof(int));
+    double* tsDq        = (double*) malloc(d * sizeof(double));
+    memcpy(tsGridSizes, gridSizes, d * sizeof(int));
+    memcpy(tsDq,        dq,        d * sizeof(double));
+
+    // create field provider
+    FieldProvider tsField(
+        cplxFieldData,
+        d,
+        tsGridSizes,
+        tsDq,
+        false,
+        phaseID);
+
+    // get pointers to ts field
+    fftw_complex* realTsData = tsField.getRealDataPointer();
+    fftw_complex* cplxTsData = tsField.getCplxDataPointer();
+    */
+
+    /*
      * ================= Quadratic coefficients ===================
      */
 
@@ -206,7 +232,11 @@ public:
     double fNew = calculator.f(cplxFieldData, realFieldData, laplacian, N);
     double fOld = 0.0;
 
-    // time step
+    // initial timestep and adaptive timestep params
+    //const double tMax = 2.0;
+    //double tMin = 0.05;
+    //const double delta = 0.001;
+    //const double rho   = 0.5 * (std::sqrt(5) - 1);
     double tStep = 0.1;
     
     // Nesterov step variables
@@ -228,6 +258,52 @@ public:
       // increment iterator
       m_fieldIterator++;
 
+      // estimate timestep
+      // tStep = tMax;
+
+      //if (m_fieldIterator % 100 == 0)
+      //  tMin *= 0.1;
+      
+      /*
+      bool tsStopCriterion = false;
+      while (!tsStopCriterion)
+      {
+        // update ts field
+        for (int i = 0; i < N; i++) {
+          // matrix element for update step
+          double A = 1.0 - tStep * laplacian[i] * Gamma[i];
+
+          // update ts field
+          cplxTsData[i][0] = (cplxNestData[i][0] + tStep * laplacian[i] * cplxNlDerivData[i][0]) / A;
+          cplxTsData[i][1] = (cplxNestData[i][1] + tStep * laplacian[i] * cplxNlDerivData[i][1]) / A * 0;
+        }
+        
+        // fourier transform ts field
+        tsField.transformC2R();
+
+        // compute quantities needed for test
+        double tsMinusNest = 0.0;
+        for (int i = 0; i < N; i++) 
+          tsMinusNest += (realTsData[i][0] - realNestData[i][0]) * (realTsData[i][0] - realNestData[i][0]);
+
+        // compute Nl free-energies:
+        double fNlNest  = calculator.fNL(realNestData,  N);
+        double fNlTs    = calculator.fNL(realTsData,    N);
+        
+        // test inequalities:
+        double inequality = fNlNest  - fNlTs - delta * tsMinusNest;
+
+        // update timestep
+        if (inequality <= 0 && tStep > tMin)
+          tStep *= rho;
+        else
+          tsStopCriterion = true; 
+      }
+      // verify timestep is between min and max bounds
+      if (tStep > tMax) tStep = tMax;
+      if (tStep < tMin) tStep = tMin;
+      */
+
       // update field
       for (int i = 0; i < N; i++) {
         // matrix element for update step
@@ -239,7 +315,7 @@ public:
 
         // update real and imaginary parts of field
         cplxFieldData[i][0] = (cplxNestData[i][0] + tStep * laplacian[i] * cplxNlDerivData[i][0]) / A;
-	cplxFieldData[i][1] = (cplxNestData[i][1] + tStep * laplacian[i] * cplxNlDerivData[i][1]) / A * 0;
+	      cplxFieldData[i][1] = (cplxNestData[i][1] + tStep * laplacian[i] * cplxNlDerivData[i][1]) / A;
 
         // update Nesterov field
         cplxNestData[i][0] = (1.0 + beta) * cplxFieldData[i][0] - beta * cplxFieldOldReVal;
@@ -278,8 +354,8 @@ public:
 
     // if we've reached the max no. of iterations, throw an error
     if (m_fieldIterator == m_maxFieldIterations) {
-      std::string message = "Maximum iterations reached in field optimization";
-      throw message;
+      std::string errorMessage = "maximum iterations reached in field optimization";
+      throw errorMessage;
     }
 
     // free laplacian and quad coefficent arrays
@@ -400,8 +476,8 @@ public:
 
     // if we've reached maximum iterations throw an error
     if (m_periodIterator == m_maxPeriodIterations) {
-      std::string message = "Maximum iterations reached in period optimization";
-      throw message;
+      std::string errorMessage = "maximum iterations reached in period optimization";
+      throw errorMessage;
     }
 
     // repackage reciprocal lattice vector b into format that field-provider likes

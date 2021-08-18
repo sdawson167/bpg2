@@ -60,6 +60,7 @@ int main(int argc, char** argv)
    
     // get phaseID - integer that indicates which phase we are optimizing
     int phaseID = *idIter;
+    std::cout << "minimizing phase " << phaseID << std::endl;
  
     // create field-provider object (represents the order parameter in real and fourier space) 
     // initialize field-provider in chosen phase
@@ -78,8 +79,6 @@ int main(int argc, char** argv)
     //outFileStream.open(fileName, std::ios_base::app);
     //outFileStream << std::fixed << std::setprecision(8);
 
-    std::cout << "minimizing phase " << phaseID << std::endl;
-
     // loop through phase points (tau, gamma, ... vals) - compute free-energy at each point
     for (paramList::const_iterator it = phasePoints.begin(); it != phasePoints.end(); it++)
     {
@@ -92,14 +91,14 @@ int main(int argc, char** argv)
       double lam1  = otherParams[2];
       double lam2  = otherParams[3];
 
+      std::cout << tau << ", " << gamma << ": ";
+
       if (phaseID == 2 && (tau > 0.0 || gamma > 0.7)) { 
         //outFileStream << 100 << std::endl;
-	std::cout << tau << ", " << gamma << ", " << 100 << std::endl;
+	std::cout << 100 << std::endl;
       } else {
         // create 'functional calculator' object - handles free-energy calculations
         PwFunctionalCalculator calculator(tau, gamma, lam1, lam2);
-
-	std::cout << "initial free energy: " << calculator.f(*field) << std::endl;
 
         // flag use to track if we should reset the phase between points:
         bool movingResetFlag = resetFlag;
@@ -110,8 +109,8 @@ int main(int argc, char** argv)
           minimizer.minimize(*field, calculator);
 	
           // if we succeed - print free-energy:
+          std::cout << calculator.f(*field) << std::endl;
 	  //outFileStream << calculator.f(*field) << std::endl;
-	  std::cout << tau << ", " << gamma << ", " << calculator.f(*field) << std::endl;
 
 	  // we can use this phase for the next loop
 	  reset = false;
@@ -128,16 +127,16 @@ int main(int argc, char** argv)
 	      minimizer.minimize(*field, calculator);
 
 	      // if we succeed - print free-energy:
+	      std::cout << calculator.f(*field) << std::endl;
 	      //outFileStream << calculator.f(*field) << std::endl;
-   	      std::cout << tau << ", " << gamma << ", " << calculator.f(*field) << std::endl;
 
 	      // we can use this phase for the next loop
 	      reset = false;
 
 	    } catch (std::string errorMessage) { 
 	      // if we fail the second time, give up on this point
+	      std::cout << 100 << std::endl;
 	      //outFileStream << 100 << std::endl;
-              std::cout << tau << ", " << gamma << ", " << 100 << std::endl;
 	    
 	      // need to reset before the next loop
 	      movingResetFlag = true;
@@ -147,8 +146,8 @@ int main(int argc, char** argv)
 	  // if we initialized the phase at the beginning of the loop there's nothing to do 
 	  // except give up on this point :(
 	  else {  
+            std::cout << 100 << std::endl;
 	    //outFileStream << 100 << std::endl;
-	    std::cout << tau << ", " << gamma << ", " << 100 << std::endl;
 	  }  
         }
         //auto end = std::chrono::steady_clock::now();
@@ -156,6 +155,7 @@ int main(int argc, char** argv)
 
         // reset initial condition
         if (movingResetFlag) { 
+	  std::cout << "resetting field" << std::endl;
 	  (*field).reset();
 	  reset = true;
         }

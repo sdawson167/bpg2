@@ -581,6 +581,471 @@ void parseInputArgs(int argc, char** argv, paramList &phasePoints, std::vector<i
  }
 }
 
+void parseInputArgsMl(int argc, char** argv, paramList &phasePoints, std::vector<int> &phaseIDList, bool &resetFlag) {
+  using namespace std;
+
+  // paramNumber checks that we are given enough parameters
+  int paramNumber = 4;
+  
+  // determine form of input arguments - input file (1), command line (2), fixed tau (3) or fixed gamma (4):
+  // form of input should be entered as first argument:
+  int inMode = 0;
+  if (argc > 1) inMode = atoi(argv[1]);
+  
+  // if not, allow user to enter choice:
+  else
+  {
+    string input;
+    cout << "choose input mode: 1 (input file), 2 (command line input), 3 (fixed tau bdry mode), 4 (fixed gamma bdry mode)" << endl;
+    getline(cin, input);
+    
+    stringstream stream(input);
+    if (!(stream >> inMode)) {
+      string message =  "second input arg is invalid - choose 1, 2, 3 or 4";
+      cin.clear();
+      throw message;
+    }
+
+    cin.clear();
+  }
+
+  // verify choice of input mode is valid
+  if (inMode != 1 && inMode != 2 && inMode != 3 && inMode != 4) {
+    string message =  "second input arg is invalid - choose 1, 2, 3 or 4";
+    throw message;
+  }
+  
+  /* initialize params from remaining input arguments
+   * how we do this depends on choice of input mode:
+   * 	1 (input file) - need name of file from cmd line
+   * 	2 (command line) - need remaining params from cmd line
+   * 	3 (bdry mode, fixed tau) - need remaining params from cmd line
+   * 	4 (bdry mode, fixed gamma) - " " 
+   */
+  
+  // use this to determine if phaseIDs were included as command line args
+  // or if we should prompt the user to enter them:
+  int phaseIDargNo = 0;
+
+  // if we chose to initialize from file:
+  if (inMode == 1)
+  {
+    // get name of file
+    string inString, inFileName;
+    
+    // allow user to enter input file name if not given:
+    if (argc < 3) {
+      cout << "enter name of input file" << endl;
+      getline(cin, inString);
+      cin.clear();
+
+    } else 
+      inString = argv[2];
+      
+    inFileName = "/home/sdawson/projects/def-shi/sdawson/BPG/" + inString;
+    
+    // open file
+    ifstream inFile;
+    inFile.open(inFileName); 
+    
+    // verify open:
+    if (!inFile) {
+      string message = "could not read input file " + inFileName;
+      throw message;
+    }
+    
+    // read input params from file and store in paramList object
+    string line;
+    while (getline(inFile,line)) 
+    {
+      vector<string> brokenLine = divideWords(line);
+      if ((int) brokenLine.size() < paramNumber) {
+        string message = "invalid parameter file for ML  model, file must provide " + to_string(paramNumber) + " input params per line";
+        throw message;
+      }
+      param otherParams;
+      for (int index = 0; index < paramNumber; index++) 
+        otherParams.push_back(stof(brokenLine[index]));
+      
+      phasePoints.push_back(otherParams);
+    }
+
+    // set reset flag value
+    if (argc < 4) {
+      cout << "Reset initial condition between runs? Choose 1 (yes) or 0 (no)" << endl; 
+      
+      string input;
+      getline(cin, input);
+      stringstream stream(input);
+      if (!(stream >> resetFlag)) {
+        cin.clear();
+        throw "invalid selection for resetFlag";
+      }
+
+    } else {
+      resetFlag = (bool) atoi(argv[3]);    
+    }
+    
+    // if argc < 5 - need to request phaseIDs from user
+    phaseIDargNo = 5; 
+
+  // end inMode = 1 case 
+                                                                                                                                                     
+  // inMode = 2: read input params (tau, gamma, ...) and list of phaseIDs from command line:
+  } else if (inMode == 2) {
+
+    // resetFlag is always true in this case
+    resetFlag = 1;
+    
+    // first, get input params (tau, gamma, ...):
+    param otherParams;
+    
+    // if parameters are not provided, allow user to enter them:
+    if (argc < (2 + paramNumber) ) {
+      cout << "enter " << paramNumber << " input params required by ML model:" << endl;
+      
+      double x;
+      string input;
+      int n = 0;
+      while (getline(cin, input)) {
+        
+        vector<string> dividedInput = divideWords(input);
+  
+        for (size_t index = 0; index < dividedInput.size(); index++) {
+          stringstream stream(dividedInput[index]);
+    
+          if (stream >> x && n < paramNumber) {
+            otherParams.push_back(x);
+            n++;
+          } 
+        } // end loop over input pts.
+  
+        // if we have enough params we can stop waiting for user input
+        if (n == paramNumber)
+          break;
+
+      } // end input while loop
+      cin.clear();
+    
+    // otherwise read parameters from command line args:
+    } else {
+      for (int index = 2; index < (2 + paramNumber); index++) 
+        otherParams.push_back(atof(argv[index])); 
+    }
+    
+    phasePoints.push_back(otherParams);
+    
+    // if argc < 3 + paramNumber - need to prompt user to enter phaseIDs:
+    phaseIDargNo = paramNumber + 3;    
+  
+  // end inMode = 2 case
+
+  // inMode = 3 : bdry mode with fixed tau val. 
+  } else if (inMode == 3) {
+    // resetFlag is always false in this case
+    resetFlag = 0;
+
+    // get fixed tau val
+    double tau;
+
+    // if tau val not provided - allow user to enter it
+    if (argc < 3) {
+      cout << "choose tau value" << endl;
+      string input;
+      getline(cin, input);
+
+      stringstream stream(input);
+      if (!(stream >> tau)) {
+        string message = "invalid choice for tau parameter";
+        cin.clear();
+        throw message;
+      }
+
+    } else {
+      tau = atof(argv[2]);
+    }
+
+    // get range of gamma values
+    double gamma1 = 0.0;
+    double gamma2 = 0.0;
+    
+    // if parameters are not provided, allow user to enter them:
+    if (argc < 5 ) {
+      cout << "choose start and end vals of gamma:" << endl;
+      
+      double x;
+      string input;
+      int n = 0;
+      while (getline(cin, input)) {
+        
+        vector<string> dividedInput = divideWords(input);
+                                                                                                     
+        for (size_t index = 0; index < dividedInput.size(); index++) {
+          stringstream stream(dividedInput[index]);
+    
+          if (stream >> x && n < 2) {
+            if (n == 0)
+              gamma1 = x;
+            if (n == 1)
+              gamma2 = x;
+            n++;
+          } 
+        } // end loop over input pts.
+                                                                                                     
+        // if we have enough params we can stop waiting for user input
+        if (n >= 2)
+          break;
+                                                                                                     
+      } // end input while loop
+      cin.clear();
+    
+    // otherwise read parameters from command line args:
+    } else {
+      gamma1 = atof(argv[3]);
+      gamma2 = atof(argv[4]);
+    }
+
+    // get eps and f vals
+    double eps;
+    double f;
+    if (argc < 7) {
+      cout << "choose eps and f values" << endl;
+        
+      double x;
+      string input;
+      int n = 0;
+      while (getline(cin, input)) {
+          
+        vector<string> dividedInput = divideWords(input);
+                                                                                                       
+        for (size_t index = 0; index < dividedInput.size(); index++) {
+          stringstream stream(dividedInput[index]);
+      
+          if (stream >> x && n < 2) {
+            if (n == 0)
+              eps = x;
+            if (n == 1)
+              f = x;
+            n++;
+          }  
+        } // end loop over input pts.
+                                                                                                       
+        // if we have enough params we can stop waiting for user input
+        if (n >= 2)
+          break;
+                                                                                                       
+      } // end input while loop
+      cin.clear();
+      
+      // otherwise read parameters from command line args:
+    } else {
+      eps = atof(argv[5]);
+      f = atof(argv[6]);
+    }
+
+    // create range of gamma values - add (tau, gamma, eps, f) lists to
+    // paramlist vector 
+    const double dGamma = 0.01;
+
+    int reverseFlag = gamma1 < gamma2 ? 1 : -1;
+    int nGamma = (int) (abs(gamma2 - gamma1) / dGamma);
+    
+    for (int i = 0; i < nGamma; i++) {
+      // add tau val to param list:
+      param otherParams;
+      otherParams.push_back(tau);
+
+      // compute next gamma val and add: 
+      double gamma = gamma1 + i * reverseFlag * dGamma;
+      otherParams.push_back(gamma);
+
+      // add eps and f vals to param list:
+      otherParams.push_back(eps);
+      otherParams.push_back(f);
+       
+      // add point to list of phasePoints
+      phasePoints.push_back(otherParams);
+    }
+     
+    // if argc < 4 + paramNumber - need to request phaseIDs from user
+    phaseIDargNo = 4 + paramNumber;
+
+  // end inMode = 3 case
+  
+  // inMode = 4 : bdry mode with fixed gamma  val. 
+  } else if (inMode == 4) {
+    // resetFlag is always false in this case
+    resetFlag = 0;
+
+    // get range of tau values
+    double tau1 = 0.0;
+    double tau2 = 0.0;
+    
+    // if parameters are not provided, allow user to enter them:
+    if (argc < 4 ) {
+      cout << "choose start and end vals of tau:" << endl;
+      
+      double x;
+      string input;
+      int n = 0;
+      while (getline(cin, input)) {
+        
+        vector<string> dividedInput = divideWords(input);
+                                                                                                     
+        for (size_t index = 0; index < dividedInput.size(); index++) {
+          stringstream stream(dividedInput[index]);
+    
+          if (stream >> x && n < 2) {
+            if (n == 0)
+              tau1 = x;
+            if (n == 1)
+              tau2 = x;
+            n++;
+          } 
+        } // end loop over input pts.
+                                                                                                     
+        // if we have enough params we can stop waiting for user input
+        if (n >= 2)
+          break;
+                                                                                                     
+      } // end input while loop
+      cin.clear();
+    
+    // otherwise read parameters from command line args:
+    } else {
+      tau1 = atof(argv[2]);
+      tau2 = atof(argv[3]);
+    }
+
+    // get fixed gamma val
+    double gamma;
+                                                             
+    // if tau val not provided - allow user to enter it
+    if (argc < 5) {
+      cout << "choose gamma value" << endl;
+      string input;
+      getline(cin, input);
+                                                             
+      stringstream stream(input);
+      if (!(stream >> gamma)) {
+        string message = "invalid choice for gamma parameter";
+        cin.clear();
+        throw message;
+      }
+                                                             
+    } else {
+      gamma = atof(argv[4]);
+    }
+
+    // get eps and f vals
+    double eps = 0.0;
+    double f = 0.0;
+    if (argc < 7) {
+      cout << "choose eps and f values" << endl;
+        
+      double x;
+      string input;
+      int n = 0;
+      while (getline(cin, input)) {
+          
+        vector<string> dividedInput = divideWords(input);
+                                                                                                       
+        for (size_t index = 0; index < dividedInput.size(); index++) {
+          stringstream stream(dividedInput[index]);
+      
+          if (stream >> x && n < 2) {
+            if (n == 0)
+              eps = x;
+            if (n == 1)
+              f = x;
+            n++;
+          } 
+        } // end loop over input pts.
+                                                                                                       
+        // if we have enough params we can stop waiting for user input
+        if (n >= 2)
+          break;
+                                                                                                       
+      } // end input while loop
+        cin.clear();
+      
+    // otherwise read parameters from command line args:
+    } else {
+      eps = atof(argv[5]);
+      f = atof(argv[6]);
+    }
+   
+
+    // create range of gamma values - add (tau, gamma, eps, f) lists to
+    // paramlist vector 
+    const double dTau = 0.01;
+
+    int reverseFlag = tau1 < tau2 ? 1 : -1;
+    int nTau = (int) (abs(tau2 - tau1) / dTau);
+    
+    for (int i = 0; i < nTau; i++) {
+      param otherParams;
+
+      // compute tau value and add:
+      double tau = tau1 + i * reverseFlag * dTau;
+      otherParams.push_back(tau);
+
+      // add gamma value. 
+      otherParams.push_back(gamma);
+
+      // add eps and f vals to param list:
+      otherParams.push_back(eps);
+      otherParams.push_back(f);
+       
+      // add point to list of phasePoints
+      phasePoints.push_back(otherParams);
+    }
+     
+    // if argc < 4 + paramNumber - need to request phaseIDs from user
+    phaseIDargNo = 4 + paramNumber;
+
+  } // end inMode = 4 case
+
+ // now get phaseIDs - list of phases to optimize:
+ if (argc <  phaseIDargNo) {
+   cout << "choose phases (1 - 9) to optimize, enter any non-numerical character to finish:" << endl;
+   
+   int phaseID;
+   string input;
+   bool readInFlag = true;
+   while (getline(cin, input)) {
+ 
+     vector<string> dividedInput = divideWords(input);
+ 
+     for (size_t index = 0; index < dividedInput.size(); index++) {
+       stringstream stream(dividedInput[index]);
+                                                                                                            
+       if (stream >> phaseID) {
+         if (phaseID > 0 && phaseID < 10)
+           phaseIDList.push_back(phaseID);
+       } else 
+         readInFlag = false;
+     }
+     if (!readInFlag)
+       break;
+   }
+                                                                                                             
+   // make sure we have at least one phase:  
+   if (phaseIDList.size() == 0) {
+     string message =  "user must choose 1 or more phases to optimize";
+     cin.clear();
+     throw message;
+   }
+   cin.clear();
+
+   cout << "starting optimization" << endl;
+                                                                                                            
+ } else {
+   for (int p = (phaseIDargNo - 1); p < argc; p++) 
+     phaseIDList.push_back(atoi(argv[p])); // end parseInputArgs method 
+ }
+}
+
 double getGamma0(int phaseID) {
   double gamma0 = 0.0;
 
